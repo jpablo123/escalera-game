@@ -291,7 +291,14 @@ function crearTablero() {
                 div.classList.add('casilla-maestro');
             } else if (casillasEspeciales[i].tipo === 'retoRegulacion') {
                 if (casillasEspeciales[i].sub === 'pausa') div.classList.add('casilla-reg-pausa');
-                else if (casillasEspeciales[i].sub === 'transforma') div.classList.add('casilla-reg-transform');
+                else if (casillasEspeciales[i].sub === 'transforma') {
+                    div.classList.add('casilla-reg-transform');
+                    // FORCE STYLE JS
+                    div.style.backgroundImage = "url('./assets/sprites/butterfly.png')";
+                    div.style.backgroundSize = "cover";
+                    div.style.backgroundRepeat = "no-repeat";
+                    div.style.backgroundPosition = "center";
+                }
                 else if (casillasEspeciales[i].sub === 'termometro') div.classList.add('casilla-reg-termo');
                 else div.classList.add('casilla-regulacion'); // Fallback
             }

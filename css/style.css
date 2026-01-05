@@ -1014,7 +1014,8 @@ body.swal2-shown {
 }
 
 .casilla-reg-transform {
-    background-image: url('../assets/sprites/tile_transforma.png') !important;
+    background-image: url('../assets/sprites/butterfly.png') !important;
+    background-color: #000 !important;
     background-size: cover;
     background-position: center;
     box-shadow: 0 0 15px #9B59B6, inset 0 0 10px #8E44AD;
@@ -1086,6 +1087,12 @@ body.swal2-shown {
     gap: 5px;
     font-family: var(--font-secondary);
     color: var(--p4-color);
+}
+
+.casilla-reg-pausa,
+.casilla-reg-transform,
+.casilla-reg-termo {
+    background-repeat: no-repeat !important;
 }
 
 .volume-control input[type="range"] {
