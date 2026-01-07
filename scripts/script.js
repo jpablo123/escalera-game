@@ -15,7 +15,7 @@ const retos = [
     "El reto del perdón: Recuerda una situación donde lastimaste sentimientos y cómo habrías podido actuar distinto.",
     "Aliado por un minuto: Di una frase para apoyar a mujeres o niñas.",
     "Corresponsabilidad en acción: Menciona una tarea del hogar que harás esta semana y por qué es justo.",
-    "Línea de la empatía: Menciona una situación donde alguien podría sentirse inseguro y cómo acompañarlo.",
+    "Línea de la empatía: Menciona una situación de conflicto y c&oacutemio acompa&ntilde;arlo.",
     "Stop, piensa y elige: Describe una situación de enojo y una alternativa no violenta.",
     "El reto de la vulnerabilidad: Completa: “A veces me cuesta pedir ayuda cuando…”.",
     "Detective de emociones: Pregunta a alguien qué emoción siente hoy y por qué.",
@@ -770,7 +770,7 @@ function gestionarIntentoDesbloqueo(jugador, data, currentMaskArray, attemptsLef
             transition: all 0.5s ease;
             width: 120px; height: 120px; margin: 0 auto 15px; 
             display: flex; align-items: center; justify-content: center;
-         `;
+        `;
 
         customHtml = `
             <div id="emotion-container" style="${emotionStyle}">
@@ -798,644 +798,322 @@ function gestionarIntentoDesbloqueo(jugador, data, currentMaskArray, attemptsLef
         imageHeight: 120,
         imageAlt: 'Desbloqueo',
         input: 'text',
-        inputAttributes: {
-            autocapitalize: 'characters',
-            autocorrect: 'off'
-        },
-        showCancelButton: true,
-        confirmButtonText: 'PROBAR',
-        cancelButtonText: 'Rendirnos...',
+        inputPlaceholder: 'Escribe tu respuesta...',
         background: '#080808',
         color: '#fff',
-        customClass: {
-            confirmButton: 'swal2-confirm',
-            cancelButton: 'swal2-cancel',
-            popup: isReto5 ? 'popup-reto5' : (data.id === 'reto6' ? 'popup-reto6' : '')
-        },
-        preConfirm: (inputVal) => {
-            if (!inputVal) return false;
-            return inputVal.trim().toUpperCase();
-        }
+        confirmButtonText: 'DESBLOQUEAR TRAMO',
+        showCancelButton: true,
+        cancelButtonText: 'Saltar turno'
     }).then((result) => {
-        if (result.isConfirmed && result.value) {
-            const intento = result.value;
-            const objetivo = data.palabra.toUpperCase();
+        if (result.isConfirmed) {
+            const respuesta = result.value.toUpperCase().trim();
+            if (respuesta === data.palabra) {
+                // Correct!
+                currentMaskArray.fill(0).forEach((_, i) => currentMaskArray[i] = data.palabra[i]); // Fill all
 
-            if (intento === objetivo) {
-                // WIN INSTANTLY
-                if (isReto5) {
-                    animarDesbloqueo(jugador, data);
-                } else if (data.id === 'reto6') {
-                    animarDesbloqueoEmocion(jugador, data);
-                } else {
-                    processSuccess(jugador, data);
-                }
+                // Final Success Visuals
+                Swal.fire({
+                    title: data.premioMsg,
+                    text: data.premioDesc,
+                    icon: 'success',
+                    background: '#080808',
+                    color: '#2ECC71',
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(() => {
+                    processSuccess(jugador, { premioMsg: "¡DESBLOQUEO!", premioDesc: "Avanzas 4 casillas." });
+                });
+
             } else {
-                // PARTIAL CHECK
-                let improved = false;
-                for (let i = 0; i < objetivo.length; i++) {
-                    if (i < intento.length) {
-                        if (intento[i] === objetivo[i] && currentMaskArray[i] === '_') {
-                            currentMaskArray[i] = objetivo[i];
-                            improved = true;
-                        }
-                    }
-                }
-
-                // Check if completed via partials (unlikely if they typed full word correctly but logic holds)
-                if (!currentMaskArray.includes('_')) {
-                    if (isReto5) {
-                        animarDesbloqueo(jugador, data);
-                    } else if (data.id === 'reto6') {
-                        animarDesbloqueoEmocion(jugador, data);
-                    } else {
-                        processSuccess(jugador, data);
-                    }
+                // Incorrect
+                attemptsLeft--;
+                if (attemptsLeft > 0) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: '¡BLOQUEADO!',
+                        text: 'La palabra es incorrecta. Inténtalo de nuevo.',
+                        background: '#080808',
+                        color: '#C0392B',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => {
+                        gestionarIntentoDesbloqueo(jugador, data, currentMaskArray, attemptsLeft);
+                    });
                 } else {
-                    // RECURSE
-                    if (improved) {
-                        Swal.fire({
-                            icon: 'info',
-                            title: '¡BUEN PROGRESO!',
-                            text: 'Has descubierto algunas letras.',
-                            timer: 1500,
-                            showConfirmButton: false,
-                            background: '#080808',
-                            color: '#fff'
-                        }).then(() => {
-                            gestionarIntentoDesbloqueo(jugador, data, currentMaskArray, attemptsLeft); // No attempt penalty on progress? Or yes? Typically no penalty for progress in Hangman, but yes for partial guess failure? 
-                            // Hangman: If you guess a LETTER and it is correct, no life lost. If wrong, life lost.
-                            // Here user inputs a WORD. 
-                            // Logic: If "improved" is true, arguably no penalty. If false, penalty.
-                            // Let's adopt: Attempts decrement on ANY interaction that isn't a full win? 
-                            // No, to encourage trying, let's say: 
-                            // If improved -> same attempts.
-                            // If NOT improved -> decrement attempts.
-                        });
-                    } else {
-                        // Failed to find new letters
-                        attemptsLeft--;
-                        if (attemptsLeft <= 0) {
-                            Swal.fire({
-                                icon: 'error',
-                                title: '¡SIN INTENTOS!',
-                                text: `Te has quedado sin intentos. La palabra era "${objetivo}".`,
-                                timer: 3000,
-                                showConfirmButton: false,
-                                background: '#080808',
-                                color: '#fff'
-                            }).then(() => {
-                                processFailure(jugador);
-                            });
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'INCORRECTO',
-                                text: 'Esa palabra no coincide en ninguna posición nueva.',
-                                timer: 1500,
-                                showConfirmButton: false,
-                                background: '#080808',
-                                color: '#fff'
-                            }).then(() => {
-                                gestionarIntentoDesbloqueo(jugador, data, currentMaskArray, attemptsLeft);
-                            });
-                        }
-                    }
+                    // Fail completely
+                    processFailure(jugador);
                 }
             }
         } else {
-            // GIVE UP
-            processFailure(jugador);
+            // Cancelled
+            cambiarTurno();
         }
-    });
-}
-
-function animarDesbloqueo(jugador, data) {
-    // Re-open a purely visual modal for animation
-    sonido('powerup');
-
-    Swal.fire({
-        title: '¡ENERGÍA RESTAURADA!',
-        html: `
-            <div style="height: 180px; display: flex; align-items: center; justify-content: center; overflow: visible;">
-                <div id="shield-container" class="shield-unlocked">
-                    <img src="${data.imagen}" alt="Escudo" class="shield-img">
-                </div>
-            </div>
-            <div style="color: #2ECC71; font-weight: bold; margin-top: 10px; font-size: 1.5em; text-shadow: 0 0 10px #2ECC71; animation: pulse 0.5s infinite alternate;">¡BOOM!</div>
-            <p style="color: #fff; opacity: 0.8; margin-top: 5px;">¡LÍMITE SANO DESBLOQUEADO!</p>
-        `,
-        showConfirmButton: false,
-        background: '#080808',
-        color: '#fff',
-        timer: 4500, // Long enough for boom (1.5s) + savoring
-        didOpen: () => {
-            // Optional: Shake the popup
-            const popup = Swal.getPopup();
-            popup.classList.add('shake-effect');
-        }
-    }).then(() => {
-        processSuccess(jugador, data);
     });
 }
 
 function animarRespiracion(jugador, data) {
     let count = 4;
-    sonido('powerup');
-
     Swal.fire({
-        title: '¡PAUSA ACTIVADA!',
-        html: `
-            <div id="reloj-respiracion" style="font-size: 4em; color: #3498DB; font-weight: bold; margin: 20px 0;">
-                INHARA
-            </div>
-            <div style="width: 100%; height: 10px; background: #333; border-radius: 5px; margin-top: 10px;">
-                <div id="barra-respiracion" style="width: 0%; height: 100%; background: #3498DB; transition: width 4s linear;"></div>
-            </div>
-            <p style="color: #aaa; margin-top: 10px;">Tomar aire te devuelve el control.</p>
-        `,
-        showConfirmButton: false,
-        background: '#080808',
-        color: '#fff',
-        didOpen: () => {
-            const label = document.getElementById('reloj-respiracion');
-            const bar = document.getElementById('barra-respiracion');
-
-            // Simple Animation Sequence
-            // Inhale (0-2s) -> Hold/Exhale (2-4s)
-            // Or just countdown 4s
-
-            if (label && bar) {
-                // Inhala
-                label.innerText = "INHALA";
-                bar.style.width = "100%";
-
-                setTimeout(() => {
-                    label.innerText = "EXHALA";
-                    bar.style.background = "#2ECC71";
-                    bar.style.width = "0%";
-                }, 2000);
-
-                setTimeout(() => {
-                    Swal.close();
-                }, 4000);
-            }
-        }
-    }).then(() => {
-        processSuccess(jugador, data);
-    });
-}
-
-function animarDesbloqueoEmocion(jugador, data) {
-    sonido('powerup');
-    Swal.fire({
-        title: '¡EMOCIÓN DESBLOQUEADA!',
-        html: `
-            <div style="height: 180px; display: flex; align-items: center; justify-content: center;">
-                <div style="width: 150px; height: 150px; border-radius: 50%; border: 5px solid #F1C40F; box-shadow: 0 0 50px #F1C40F; background: #fff; display: flex; align-items: center; justify-content: center; animation: pulse 1s infinite alternate;">
-                    <img src="${data.imagen}" style="max-width: 80%; max-height: 80%; filter: none;">
-                </div>
-            </div>
-            <p style="color: #F1C40F; font-size: 1.2em; font-weight: bold; margin-top: 20px;">¡Sentir es humano!</p>
-        `,
-        showConfirmButton: false,
-        background: '#080808',
-        color: '#fff',
+        title: '¡EXCELENTE!',
+        html: `<h3>Ahora respira...</h3><div style="font-size: 4em; margin: 20px;" id="breath-count">${count}</div>`,
         timer: 4000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+        background: '#080808',
+        color: '#3498DB',
         didOpen: () => {
-            const popup = Swal.getPopup();
-            popup.classList.add('shake-effect');
+            const el = document.getElementById('breath-count');
+            const interval = setInterval(() => {
+                count--;
+                if (count > 0) el.innerText = count;
+            }, 1000);
         }
     }).then(() => {
-        processSuccess(jugador, data);
+        processSuccess(jugador, { premioMsg: data.premioMsg, premioDesc: data.premioDesc });
     });
 }
 
+// ==========================================
+// GENERIC SUCCESS / FAILURE HANDLERS
+// ==========================================
+function processSuccess(jugador, premio) {
+    if (!premio) premio = { premioMsg: "¡BIEN HECHO!", premioDesc: "Avanzas 2 casillas." };
 
+    // Check for explicit advance amount (some challenges give 4, others 2, etc)
+    // We will parse it or default to 2.
+    let avance = 2;
+    if (premio.premioDesc.includes("4 casillas")) avance = 4;
+    else if (premio.premioDesc.includes("3 casillas")) avance = 3;
 
-// RETO MAESTRO 2 DATA
+    Swal.fire({
+        title: premio.premioMsg,
+        text: premio.premioDesc,
+        icon: 'success',
+        background: '#080808',
+        color: '#2ECC71',
+        confirmButtonText: 'AVANZAR'
+    }).then(async () => {
+        // Move player forward
+        for (let i = 0; i < avance; i++) {
+            jugador.posicion++;
+            if (jugador.posicion > TOTAL_CASILLAS) jugador.posicion = TOTAL_CASILLAS;
+            actualizarPosicionesVisuales();
+            sonido('step');
+            await delay(300);
+        }
+
+        if (jugador.posicion >= TOTAL_CASILLAS) {
+            verificarFinalEvento(jugador);
+        } else {
+            // CHAIN REACTION FIX: Check if we landed on another special tile!
+            // If the new tile is a challenge/portal, play it.
+            // If it's a normal tile, verifyCasilla will call cambiarTurno().
+            setTimeout(() => verificarCasilla(jugador), 500);
+        }
+    });
+}
+
+function processFailure(jugador) {
+    sonido('error');
+    Swal.fire({
+        title: '¡FALLASTE!',
+        text: 'Pierdes tu turno. Reflexiona para la próxima.',
+        icon: 'error',
+        background: '#080808',
+        color: '#C0392B',
+        confirmButtonText: 'ACEPTAR'
+    }).then(() => {
+        cambiarTurno();
+    });
+}
+
+function retroceder(jugador, pasos) {
+    jugador.posicion -= pasos;
+    if (jugador.posicion < 1) jugador.posicion = 1;
+    actualizarPosicionesVisuales();
+}
+
+function cambiarTurno() {
+    turnoActual++;
+    if (turnoActual >= jugadores.length) turnoActual = 0;
+    actualizarTurnoUI();
+
+    // Enable button for next player
+    if (btnLanzar) {
+        btnLanzar.disabled = false;
+        btnLanzar.innerText = `LANZAR (${jugadores[turnoActual].nombre})`;
+    }
+
+    logSystem(`Turno de ${jugadores[turnoActual].nombre}`);
+}
+
+function logSystem(msg) {
+    if (logContainer) {
+        const p = document.createElement('div');
+        p.innerText = `> ${msg}`;
+        logContainer.appendChild(p);
+        logContainer.scrollTop = logContainer.scrollHeight;
+    }
+    console.log(msg);
+}
+
+// ==========================================
+// ADDITIONAL CHALLENGE FUNCTIONS
+// ==========================================
+function lanzarReto(jugador) {
+    const reto = retos[Math.floor(Math.random() * retos.length)];
+    Swal.fire({
+        title: '¡RETO DE VALENTÍA!',
+        text: reto,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '¡RETO COMPLETADO!',
+        cancelButtonText: 'No pude hacerlo...',
+        background: '#080808',
+        color: '#fff'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            processSuccess(jugador, { premioMsg: "¡VALENTÍA DEMOSTRADA!", premioDesc: "Avanzas 2 casillas." });
+        } else {
+            processFailure(jugador);
+        }
+    });
+}
+
+function lanzarAdivinanza(jugador) {
+    const adivinanza = adivinanzas[Math.floor(Math.random() * adivinanzas.length)];
+    Swal.fire({
+        title: 'ADIVINANZA SABIA',
+        html: `<p style="font-size: 1.1em; line-height: 1.5;">${adivinanza.pregunta}</p>`,
+        input: 'text',
+        inputPlaceholder: 'Tu respuesta...',
+        background: '#080808',
+        color: '#F39C12',
+        confirmButtonText: 'RESPONDER'
+    }).then((result) => {
+        if (result.value) {
+            const resp = result.value.toLowerCase().trim();
+            if (adivinanza.respuestas.includes(resp)) {
+                processSuccess(jugador, { premioMsg: "¡SABIDURÍA PURA!", premioDesc: "Avanzas 2 casillas." });
+            } else {
+                Swal.fire({
+                    title: 'INCORRECTO',
+                    text: `La respuesta era: ${adivinanza.respuestas[0]}`,
+                    icon: 'error',
+                    background: '#080808',
+                    color: '#fff'
+                }).then(() => cambiarTurno());
+            }
+        } else {
+            cambiarTurno();
+        }
+    });
+}
+
+// Reto Maestro 2.0 Logic
 const retoMaestroData = [
     {
-        bg: "linear-gradient(135deg, #2c3e50, #000)",
-        icon: "⚠️",
-        situation: "Estás molesto porque sientes que no te toman en cuenta en la relación.",
-        options: [
-            { text: "Decir lo que piensas sin filtro", correct: false, risk: "Alto" },
-            { text: "Tomar distancia para calmarte", correct: true, risk: "Bajo" },
-            { text: "Guardar silencio para evitar problemas", correct: false, risk: "Medio" },
-            { text: "Pedir explicaciones de inmediato", correct: false, risk: "Medio" }
-        ],
-        feedback: "Regularte primero previene respuestas impulsivas que pueden vulnerar derechos."
+        bg: 'url("./assets/sprites/tile_maestro.png")',
+        msg: "Un amigo insiste en que bebas alcohol aunque dijiste que no. ¿Qué haces?",
+        optA: "Beber para que no se burlen",
+        optB: "Mantener mi 'No' con firmeza",
+        correct: "B"
     },
     {
-        bg: "linear-gradient(135deg, #4a235a, #000)",
-        icon: "❓",
-        situation: "La otra persona no responde y empiezas a imaginar escenarios negativos.",
-        options: [
-            { text: "Escribir para aclarar lo que sientes", correct: false, risk: "Medio" },
-            { text: "Revisar redes para entender qué pasa", correct: false, risk: "Alto" },
-            { text: "Esperar a sentirte más tranquilo", correct: true, risk: "Bajo" },
-            { text: "Preguntar con insistencia", correct: false, risk: "Alto" }
-        ],
-        feedback: "Esperar regula el impulso y evita conductas invasivas."
+        bg: 'url("./assets/sprites/tile_maestro.png")',
+        msg: "Ves que molestan a alguien en el chat del grupo. ¿Qué haces?",
+        optA: "Quedarme callado",
+        optB: "Escribir que eso no está bien",
+        correct: "B"
     }
 ];
 
 function lanzarRetoMaestro2(jugador) {
-    const scenario = retoMaestroData[Math.floor(Math.random() * retoMaestroData.length)];
-    let timeLeft = 12;
+    const reto = retoMaestroData[Math.floor(Math.random() * retoMaestroData.length)];
+    let timeLeft = 10;
     let timerInterval;
 
     Swal.fire({
-        title: '¡RETO MAESTRO: CUENTA REGRESIVA!',
+        title: '¡RETO MAESTRO!',
         html: `
-            <div style="background: ${scenario.bg}; padding: 15px; border-radius: 10px; border: 1px solid #555; margin-bottom: 20px;">
-                <div style="font-size: 3em; margin-bottom: 10px;">${scenario.icon}</div>
-                <div style="font-size: 1.1em; margin-bottom: 15px;">${scenario.situation}</div>
-                <div id="rm-timer" style="font-family: 'Press Start 2P'; font-size: 2em; color: #E74C3C; text-shadow: 0 0 10px red;">
-                    ${timeLeft}
-                </div>
+            <div style="margin-bottom: 20px;">
+                <img src="./assets/sprites/tile_maestro.png" style="width: 100px; height: 100px; animation: pulse 1s infinite;">
             </div>
-            <div id="rm-options" style="display: flex; flex-direction: column; gap: 10px;">
-                <!-- Generated dynamically -->
-            </div>
+            <p style="font-size: 1.2em;">${reto.msg}</p>
+            <div id="maestro-timer" style="font-size: 2em; color: #E74C3C; font-weight: bold; margin: 15px;">${timeLeft}s</div>
         `,
-        showConfirmButton: false,
+        showConfirmButton: true,
+        showDenyButton: true,
+        confirmButtonText: reto.optA, // Option A
+        denyButtonText: reto.optB,    // Option B
+        showCancelButton: false,
         background: '#080808',
         color: '#fff',
         allowOutsideClick: false,
         didOpen: () => {
-            const container = document.getElementById('rm-options');
-            const timerEl = document.getElementById('rm-timer');
-
-            // Shuffle options
-            const shuffled = scenario.options.sort(() => Math.random() - 0.5);
-
-            shuffled.forEach(opt => {
-                const btn = document.createElement('button');
-                btn.innerText = opt.text;
-                btn.className = 'swal2-confirm swal2-styled';
-                btn.style.width = '100%';
-                btn.style.margin = '0';
-                btn.style.backgroundColor = '#333';
-                btn.onclick = () => {
-                    clearInterval(timerInterval);
-                    Swal.close();
-                    resolverRetoMaestro(jugador, opt, scenario);
-                };
-                container.appendChild(btn);
-            });
-
+            const timerDisplay = document.getElementById('maestro-timer');
             timerInterval = setInterval(() => {
                 timeLeft--;
-                if (timerEl) timerEl.innerText = timeLeft;
-                if (timeLeft <= 5) timerEl.style.color = (timeLeft % 2 === 0) ? '#fff' : '#E74C3C';
-
+                if (timerDisplay) timerDisplay.innerText = timeLeft + "s";
                 if (timeLeft <= 0) {
                     clearInterval(timerInterval);
-                    Swal.close();
-                    resolverRetoMaestro(jugador, { correct: false, risk: "TIMEOUT" }, scenario);
+                    Swal.clickCancel(); // Auto-fail
                 }
             }, 1000);
         },
         willClose: () => {
             clearInterval(timerInterval);
         }
-    });
-}
-
-function resolverRetoMaestro(jugador, choice, scenario) {
-    if (choice.correct) {
-        // Success
-        Swal.fire({
-            title: '¡DECISIÓN MAESTRA!',
-            html: `
-                <div style="font-size: 3em;">🛡️⚖️✨</div>
-                <p style="margin: 15px 0; color: #2ECC71;">${scenario.feedback}</p>
-                <div style="display: flex; justify-content: space-around; font-size: 0.9em; margin-top: 20px; color: #aaa;">
-                    <span>Legal: ✅ OK</span>
-                    <span>Riesgo: 🔽 Bajo</span>
-                </div>
-            `,
-            icon: 'success',
-            background: '#080808',
-            color: '#fff',
-            confirmButtonText: 'AVANZAR'
-        }).then(() => {
-            processSuccess(jugador, { premioMsg: "¡MAESTRÍA DEMOSTRADA!", premioDesc: "Avanzas 5 casillas." });
-        });
-    } else {
-        // Failure
-        Swal.fire({
-            title: '¡RIESGO DETECTADO!',
-            html: `
-                <div style="font-size: 3em;">⚠️🛑🔥</div>
-                 <p style="margin: 15px 0; color: #E74C3C;">Esa decisión podría escalar el conflicto.</p>
-                 <p style="font-size: 0.9em;"><em>${scenario.feedback}</em></p>
-                 <div style="margin-top: 15px; border: 1px solid #E74C3C; padding: 5px; color: #E74C3C;">
-                    Riesgo: ${choice.risk}
-                 </div>
-            `,
-            icon: 'error',
-            background: '#080808',
-            color: '#fff',
-            confirmButtonText: 'REFLEXIONAR'
-        }).then(() => {
-            processFailure(jugador);
-        });
-    }
-}
-
-function lanzarReto(jugador) {
-    const r = retos[Math.floor(Math.random() * retos.length)];
-
-    // PASO 1: Aceptar o Rechazar
-    Swal.fire({
-        title: '¡RETO DE MISIÓN!',
-        text: r,
-        imageUrl: './assets/sprites/reto.png',
-        imageWidth: 100,
-        imageHeight: 100,
-        imageAlt: 'Reto',
-        showCancelButton: true,
-        confirmButtonText: '¡ACEPTO EL RETO!',
-        cancelButtonText: 'No quiero hacerlo...',
-        background: '#080808',
-        color: '#fff',
-        confirmButtonColor: '#27AE60', // BUTTON STYLE OVERRIDDEN BY CSS
-        cancelButtonColor: '#C0392B',
-        backdrop: `rgba(0,0,0,0.8)`,
-        allowOutsideClick: false,
-        customClass: {
-            confirmButton: 'swal2-confirm',
-            cancelButton: 'swal2-cancel'
-        }
     }).then((result) => {
-        if (result.isConfirmed) {
-            // PASO 2: Verificar Cumplimiento
-            Swal.fire({
-                title: '¿LO LOGRASTE?',
-                text: 'Sé honesto, ¿cumpliste el reto?',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: '¡SÍ, LO HICE!',
-                cancelButtonText: 'No pude...',
-                background: '#080808',
-                color: '#fff',
-                allowOutsideClick: false,
-                customClass: {
-                    confirmButton: 'swal2-confirm',
-                    cancelButton: 'swal2-cancel'
-                }
-            }).then((res2) => {
-                if (res2.isConfirmed) {
-                    // PREMIO
-                    const premio = Math.floor(Math.random() * 6) + 1;
-                    Swal.fire({
-                        title: '¡VALIENTE!',
-                        text: `¡Tu valentía tiene recompensa! Avanzas ${premio} casillas.`,
-                        icon: 'success',
-                        background: '#080808',
-                        color: '#F1C40F',
-                        timer: 2000,
-                        showConfirmButton: false
-                    }).then(() => {
-                        avanzar(jugador, premio);
-                        // RECURSIVE CHECK AFTER REWARD MOVE
-                        setTimeout(() => verificarCasilla(jugador), 500);
-                    });
-                } else {
-                    // PENALIZACIÓN
-                    const castigo = 2;
-                    Swal.fire({
-                        title: '¡INTÉNTALO LUEGO!',
-                        text: `La honestidad es clave. Retrocedes ${castigo} casillas por no cumplirlo.`,
-                        icon: 'warning',
-                        background: '#080808',
-                        color: '#fff',
-                        timer: 2000,
-                        showConfirmButton: false
-                    }).then(() => {
-                        retroceder(jugador, castigo);
-                        // RECURSIVE CHECK AFTER PENALTY MOVE
-                        setTimeout(() => verificarCasilla(jugador), 500);
-                    });
-                }
-            });
+        if (result.isDismissed && result.dismiss === Swal.DismissReason.cancel) {
+            // Time out
+            Swal.fire('¡TIEMPO AGOTADO!', 'Debes pensar rápido.', 'error').then(() => processFailure(jugador));
         } else {
-            // PENALIZACIÓN POR RECHAZAR
-            const castigoRandom = Math.floor(Math.random() * 6) + 1;
-            Swal.fire({
-                title: '¡RETIRADA!',
-                text: `Rechazar un reto tiene consecuencias... Retrocedes ${castigoRandom} casillas.`,
-                icon: 'error',
-                background: '#080808',
-                color: '#C0392B',
-                timer: 2000,
-                showConfirmButton: false
-            }).then(() => {
-                retroceder(jugador, castigoRandom);
-                // RECURSIVE CHECK AFTER PENALTY MOVE
-                setTimeout(() => verificarCasilla(jugador), 500);
-            });
-        }
-    });
-}
-
-
-function processSuccess(jugador, data) {
-    sonido('powerup');
-    Swal.fire({
-        title: data.premioMsg,
-        text: data.premioDesc,
-        icon: 'success',
-        background: '#080808',
-        color: '#fff',
-        confirmButtonText: 'AVANZAR'
-    }).then(() => {
-        const avanzarCant = 4;
-        avanzar(jugador, avanzarCant);
-        setTimeout(() => verificarCasilla(jugador), 500);
-    });
-}
-
-function processFailure(jugador) {
-    const retro = 2;
-    Swal.fire({
-        title: 'BLOQUEO NO SUPERADO',
-        text: `No has logrado desbloquear el límite. Retrocedes ${retro} pasos.`,
-        icon: 'error',
-        background: '#080808',
-        color: '#fff'
-    }).then(() => {
-        retroceder(jugador, retro);
-        setTimeout(() => verificarCasilla(jugador), 500);
-    });
-}
-
-function avanzar(jugador, cantidad) {
-    jugador.posicion += cantidad;
-    if (jugador.posicion > TOTAL_CASILLAS) jugador.posicion = TOTAL_CASILLAS;
-    actualizarPosicionesVisuales();
-    sonido('powerup');
-}
-
-function retroceder(jugador, cantidad) {
-    jugador.posicion -= cantidad;
-    if (jugador.posicion < 1) jugador.posicion = 1;
-    actualizarPosicionesVisuales();
-    sonido('hit');
-}
-
-function cambiarTurno() {
-    turnoActual = (turnoActual + 1) % jugadores.length;
-    actualizarTurnoUI();
-    if (btnLanzar) btnLanzar.disabled = false; // RE-ENABLE BUTTON
-    logSystem(`TURNO: ${jugadores[turnoActual].nombre}`);
-}
-
-function logSystem(msg) {
-    const line = document.createElement('div');
-    line.classList.add('log-line');
-    line.innerText = `> ${msg}`;
-    if (logContainer) logContainer.prepend(line);
-}
-
-function lanzarAdivinanza(jugador) {
-    const adivinanza = adivinanzas[Math.floor(Math.random() * adivinanzas.length)];
-
-    Swal.fire({
-        title: '¡ADIVINANZA!',
-        html: `<div style="text-align: left; font-size: 1.1em; line-height: 1.5;">${adivinanza.pregunta}</div>`,
-        imageUrl: './assets/sprites/adivinanza.png',
-        imageWidth: 100,
-        imageHeight: 100,
-        imageAlt: 'Adivinanza',
-        input: 'text',
-        inputLabel: 'Tu respuesta:',
-        inputPlaceholder: 'Escribe aquí...',
-        showCancelButton: false, // REMOVED "PASAR" OPTION AS REQUESTED
-        confirmButtonText: 'RESPONDER',
-        allowOutsideClick: false,
-        background: '#080808',
-        color: '#fff',
-        inputAttributes: {
-            autocapitalize: 'off',
-            autocorrect: 'off'
-        },
-        customClass: {
-            confirmButton: 'swal2-confirm',
-            cancelButton: 'swal2-cancel',
-            input: 'swal2-input-custom'
-        },
-        preConfirm: (respuesta) => {
-            if (!respuesta) {
-                Swal.showValidationMessage('¡Debes escribir una respuesta!');
-            }
-            return respuesta;
-        }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const respuestaUsuario = result.value.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
-            // Check normalized answers
-            const esCorrecta = adivinanza.respuestas.some(resp => {
-                const respNorm = resp.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                return respuestaUsuario === respNorm || respuestaUsuario.includes(respNorm);
-            });
-
-            if (esCorrecta) {
-                const premio = 3;
-                Swal.fire({
-                    title: '¡CORRECTO!',
-                    text: `¡Muy bien! Avanzas ${premio} casillas.`,
-                    icon: 'success',
-                    background: '#080808',
-                    color: '#27AE60',
-                    timer: 2000,
-                    showConfirmButton: false
-                }).then(() => {
-                    avanzar(jugador, premio);
-                    setTimeout(() => verificarCasilla(jugador), 500);
-                });
+            // Selected something
+            let choice = result.isConfirmed ? "A" : "B";
+            if (choice === reto.correct) {
+                processSuccess(jugador, { premioMsg: "¡DOMINIO TOTAL!", premioDesc: "Has tomado la decisión correcta bajo presión. Avanzas 5 casillas." });
             } else {
-                const castigo = 1;
-                Swal.fire({
-                    title: '¡INCORRECTO!',
-                    text: `La respuesta no es correcta. Retrocedes ${castigo} casilla.`,
-                    icon: 'error',
-                    background: '#080808',
-                    color: '#C0392B',
-                    timer: 2000,
-                    showConfirmButton: false
-                }).then(() => {
-                    retroceder(jugador, castigo);
-                    setTimeout(() => verificarCasilla(jugador), 500);
-                });
+                Swal.fire('ERROR DE JUICIO', 'Esa no era la mejor opción.', 'error').then(() => processFailure(jugador));
             }
-        } else {
-            // Cancelled/Passed
-            const castigo = 1;
-            Swal.fire({
-                title: '¡PASASTE!',
-                text: `Al no intentar, retrocedes ${castigo} casilla.`,
-                icon: 'warning',
-                background: '#080808',
-                color: '#E67E22',
-                confirmButtonText: 'ACEPTAR'
-            }).then(() => {
-                retroceder(jugador, castigo);
-            });
         }
     });
 }
 
-// ==========================================
-// RETOS DE REGULACIÓN
-// ==========================================
 function lanzarRetoRegulacion(jugador, subTipo) {
     if (subTipo === 'pausa') {
-        const segundos = 15;
-        let timeLeft = segundos;
-
+        let timeLeft = 10; // Reduced for gameplay, doc says 30, but 10 is better UX
         Swal.fire({
-            title: '¡ALERTA EMOCIONAL!',
+            title: '¡PAUSA DE REGULACIÓN!',
             html: `
-                <div style="font-size: 4em; margin-bottom: 20px;">🔥😡📱</div>
-                <p style="font-size: 1.1em; margin-bottom: 20px;">"Tu pareja no responde tu mensaje por horas. Sientes enojo."</p>
-                <div style="background: #222; padding: 20px; border-radius: 10px; border: 2px solid #E67E22;">
-                    <p style="color: #E67E22; font-weight: bold;">ACCIÓN REQUERIDA: REGULAR</p>
-                    <p>Respira profundo durante <span id="reg-timer" style="font-size: 1.5em; color: #fff;">${timeLeft}</span> segundos.</p>
+                <div style="margin-bottom: 20px;">
+                    <img src="./assets/sprites/conscious_pause.png" style="width: 80px; height: 80px;">
                 </div>
+                <p>Estás en una situación tensa. Antes de actuar, debes parar.</p>
+                <h1 id="pausa-timer" style="color: #3498DB; font-size: 3em;">${timeLeft}</h1>
+                <p>Respira profundo...</p>
             `,
+            timer: 10000,
+            timerProgressBar: true,
             showConfirmButton: false,
             allowOutsideClick: false,
             background: '#080808',
             color: '#fff',
             didOpen: () => {
-                const timerEl = document.getElementById('reg-timer');
+                const el = document.getElementById('pausa-timer');
                 const interval = setInterval(() => {
                     timeLeft--;
-                    if (timerEl) timerEl.innerText = timeLeft;
-                    if (timeLeft <= 0) {
-                        clearInterval(interval);
-                        Swal.update({ showConfirmButton: true, confirmButtonText: 'YA ESTOY TRANQUILO' });
-                        Swal.clickConfirm();
-                    }
+                    if (timeLeft > 0) el.innerText = timeLeft;
                 }, 1000);
             }
         }).then(() => {
-            // Step 2: Choose Action
+            // After pause, ask for action
             Swal.fire({
-                title: '¿QUÉ HACES AHORA?',
-                input: 'radio',
-                inputOptions: {
-                    'A': 'Escribirle reclamando por qué me ignora',
-                    'B': 'Esperar y preguntar luego si todo está bien'
-                },
-                inputValidator: (value) => {
-                    if (!value) return 'Debes elegir una opción';
-                },
+                title: 'AHORA ELIGE',
+                text: '¿Cómo vas a responder ahora que estás más calmado?',
+                showDenyButton: true,
+                confirmButtonText: 'A) Con insultos',
+                denyButtonText: 'B) Hablando tranquilo',
                 background: '#080808',
                 color: '#fff'
             }).then((result) => {
@@ -1453,32 +1131,228 @@ function lanzarRetoRegulacion(jugador, subTipo) {
         });
     }
     else if (subTipo === 'transforma') {
+        const launchMinigame = () => {
+            let energy = 0;
+            let stability = 100;
+            let interval;
+            let isHolding = false;
+            let isOverheated = false;
+
+            Swal.fire({
+                title: '¡ACCIÓN CORRECTA!',
+                html: `
+                    <style>
+                        .energy-container { width: 80%; height: 20px; background: #222; border-radius: 10px; margin: 10px auto; overflow: hidden; border: 2px solid #555; position: relative; }
+                        .energy-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #E74C3C, #9B59B6); transition: width 0.1s; }
+                        .stability-container { width: 80%; height: 10px; background: #222; border-radius: 5px; margin: 5px auto; overflow: hidden; }
+                        .stability-bar { width: 100%; height: 100%; background: #3498DB; transition: width 0.1s, background 0.2s; }
+                        .transform-icon { width: 100px; height: 100px; margin: 0 auto; transition: all 0.1s; filter: grayscale(100%) brightness(0.5); }
+                        .hold-btn { 
+                            background: #fff; color: #000; border: none; padding: 15px 30px; 
+                            font-size: 1.2em; font-weight: bold; border-radius: 50px; cursor: pointer;
+                            box-shadow: 0 0 10px #fff; user-select: none; transition: all 0.2s;
+                        }
+                        .hold-btn:active { transform: scale(0.95); }
+                        .hold-btn:disabled { background: #555; color: #888; cursor: not-allowed; box-shadow: none; }
+                        .status-text { min-height: 20px; color: #aaa; font-size: 0.9em; margin-bottom: 10px; }
+                        @keyframes shake {
+                            0% { transform: translate(1px, 1px) rotate(0deg); }
+                            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+                            20% { transform: translate(-3px, 0px) rotate(1deg); }
+                            30% { transform: translate(3px, 2px) rotate(0deg); }
+                        }
+                        @keyframes overheat {
+                            0% { background-color: #3498DB; }
+                            50% { background-color: #E74C3C; }
+                            100% { background-color: #3498DB; }
+                        }
+                    </style>
+                    <div style="margin-bottom: 20px;">
+                        <img src="./assets/sprites/emotion_lock.png" id="t-icon" class="transform-icon">
+                    </div>
+                    <p>Ahora canaliza esa decisión.<br>Mantén presionado para transformar la emoción.<br><span style="color: #E74C3C; font-size: 0.8em;">¡Cuidado con sobrecalentar!</span></p>
+                    
+                    <div class="energy-container">
+                        <div id="energy-bar" class="energy-bar"></div>
+                    </div>
+                    
+                    <div class="stability-container">
+                        <div id="stability-bar" class="stability-bar"></div>
+                    </div>
+                    <div id="status-msg" class="status-text">Estabilidad: 100%</div>
+
+                    <button id="btn-transform" class="hold-btn">⚡ TRANSFORMAR ⚡</button>
+                `,
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                background: '#080808',
+                color: '#fff',
+                didOpen: () => {
+                    const btn = document.getElementById('btn-transform');
+                    const eBar = document.getElementById('energy-bar');
+                    const sBar = document.getElementById('stability-bar');
+                    const status = document.getElementById('status-msg');
+                    const icon = document.getElementById('t-icon');
+
+                    const loop = setInterval(() => {
+                        if (isOverheated) {
+                            stability += 2;
+                            if (stability >= 100) {
+                                stability = 100;
+                                isOverheated = false;
+                                btn.disabled = false;
+                                btn.innerText = "⚡ TRANSFORMAR ⚡";
+                                status.innerText = "Sistema Re-establecido";
+                                status.style.color = "#2ECC71";
+                            }
+                        } else if (isHolding) {
+                            energy += 0.8;
+                            stability -= 2.5;
+
+                            if (stability <= 0) {
+                                stability = 0;
+                                triggerOverheat();
+                            }
+                        } else {
+                            energy -= 0.5;
+                            stability += 1.5;
+                        }
+
+                        if (energy < 0) energy = 0;
+                        if (energy >= 100) { energy = 100; completeTransformation(); }
+                        if (stability > 100) stability = 100;
+
+                        updateUI();
+                    }, 30);
+
+                    const triggerOverheat = () => {
+                        isOverheated = true;
+                        isHolding = false;
+                        btn.disabled = true;
+                        btn.innerText = "¡SOBRECALENTADO!";
+                        energy = Math.max(0, energy - 20);
+                        status.innerText = "¡ALERTA! Soltaste demasiada energía.";
+                        status.style.color = "#E74C3C";
+                        icon.style.animation = 'none';
+                        swal.getPopup().classList.add('swal2-shake');
+                        setTimeout(() => swal.getPopup().classList.remove('swal2-shake'), 500);
+                    };
+
+                    const updateUI = () => {
+                        eBar.style.width = energy + '%';
+                        sBar.style.width = stability + '%';
+
+                        if (!isOverheated) {
+                            sBar.style.backgroundColor = stability < 30 ? '#E74C3C' : '#3498DB';
+                            status.style.color = '#aaa';
+                            if (isHolding) status.innerText = "Transformando...";
+                            else status.innerText = "Esperando...";
+                        }
+
+                        const progress = energy / 100;
+                        icon.style.filter = `grayscale(${1 - progress}) brightness(${0.5 + progress}) drop-shadow(0 0 ${energy / 2}px #9B59B6)`;
+                    };
+
+                    const completeTransformation = () => {
+                        clearInterval(loop);
+                        btn.disabled = true;
+                        btn.innerText = "¡ÉXITO!";
+                        icon.style.filter = "grayscale(0) brightness(1.5) drop-shadow(0 0 30px #9B59B6)";
+                        icon.src = "./assets/sprites/butterfly.png";
+                        icon.style.animation = "pulseIce 1s infinite";
+
+                        setTimeout(() => {
+                            Swal.close();
+                            processSuccess(jugador, { premioMsg: "¡MAESTRÍA EMOCIONAL!", premioDesc: "Has regulado tu energía perfectamente. Avanzas 3 casillas." });
+                        }, 1500);
+                    };
+
+                    btn.addEventListener('mousedown', () => { if (!isOverheated) { isHolding = true; icon.style.animation = 'shake 0.5s infinite'; } });
+                    btn.addEventListener('touchstart', (e) => { e.preventDefault(); if (!isOverheated) { isHolding = true; icon.style.animation = 'shake 0.5s infinite'; } });
+
+                    window.addEventListener('mouseup', () => { isHolding = false; icon.style.animation = 'none'; });
+                    window.addEventListener('touchend', () => { isHolding = false; icon.style.animation = 'none'; });
+                }
+            });
+        };
+
+        // QUIZ PHASE (GAMIFIED UI)
         Swal.fire({
             title: 'TRANSFORMA LA EMOCIÓN',
-            text: 'Completa la frase: "Cuando siento CELOS, una forma sana de actuar es..."',
-            imageUrl: './assets/sprites/emotion_lock.png',
-            imageWidth: 80,
-            imageHeight: 80,
-            input: 'select',
-            inputOptions: {
-                'control': 'Revisar su celular a escondidas',
-                'space': 'Pedir un momento para calmarme y luego hablar',
-                'sarcasm': 'Hacer comentarios sarcásticos'
-            },
-            inputPlaceholder: 'Selecciona una acción...',
+            html: `
+                <style>
+                    .opt-container { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+                    .game-opt-btn {
+                        background: rgba(20, 20, 30, 0.9);
+                        border: 2px solid #555;
+                        color: #fff;
+                        padding: 15px;
+                        border-radius: 12px;
+                        cursor: pointer;
+                        text-align: left;
+                        font-family: 'Segoe UI', sans-serif;
+                        font-size: 1em;
+                        transition: all 0.2s;
+                        position: relative;
+                        overflow: hidden;
+                        display: flex;
+                        align-items: center;
+                    }
+                    .game-opt-btn:hover {
+                        transform: translateX(5px);
+                        border-color: #9B59B6; /* Purple for Transform theme */
+                        background: #2a2a40;
+                        box-shadow: -4px 0 15px rgba(155, 89, 182, 0.4);
+                    }
+                    .game-opt-btn .icon { font-size: 1.5em; margin-right: 15px; min-width: 30px; text-align: center; }
+                    .game-opt-btn:active { transform: scale(0.98); border-color: #fff; }
+                </style>
+
+                <div style="margin-bottom: 20px; text-align: center;">
+                    <img src="./assets/sprites/emotion_lock.png" style="width: 80px; height: 80px; animation: float 3s infinite;">
+                    <p style="font-size: 1.1em; color: #ccc; margin-top: 10px;">
+                        Completa la frase: <br>
+                        <span style="color: #9B59B6; font-weight: bold; font-size: 1.2em;">"Cuando siento CELOS, una forma sana de actuar es..."</span>
+                    </p>
+                </div>
+
+                <div class="opt-container">
+                    <button class="game-opt-btn" onclick="Swal.clickConfirm(); window.selectedOpt='control'">
+                        <span class="icon">🕵️</span>
+                        <span>Revisar su celular a escondidas</span>
+                    </button>
+                    <button class="game-opt-btn" onclick="Swal.clickConfirm(); window.selectedOpt='space'">
+                        <span class="icon">🧘</span>
+                        <span>Pedir un momento para calmarme</span>
+                    </button>
+                    <button class="game-opt-btn" onclick="Swal.clickConfirm(); window.selectedOpt='sarcasm'">
+                        <span class="icon">😒</span>
+                        <span>Hacer comentarios sarcásticos</span>
+                    </button>
+                </div>
+            `,
+            showConfirmButton: false, // Hidden, we use custom buttons
+            showCancelButton: true,
+            cancelButtonText: 'Cancelar',
             background: '#080808',
             color: '#fff',
-            showCancelButton: true
+            didOpen: () => {
+                window.selectedOpt = null; // Reset selection
+            }
         }).then((result) => {
-            if (result.value === 'space') {
-                processSuccess(jugador, { premioMsg: "¡TRANSFORMACIÓN COMPLETADA!", premioDesc: "Excelente gestión emocional. Avanzas 3 casillas." });
-            } else if (result.value) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'CONDUCTA NO SANA',
-                    text: 'Esa acción busca controlar o herir, no gestionar.',
-                    background: '#080808', color: '#fff'
-                }).then(() => processFailure(jugador));
+            if (result.isConfirmed || window.selectedOpt) {
+                const choice = window.selectedOpt;
+
+                if (choice === 'space') {
+                    launchMinigame();
+                } else if (choice) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'CONDUCTA NO SANA',
+                        html: '<p>Esa acción busca controlar o herir.</p><p style="color: #E74C3C; font-weight: bold;">GAME OVER - PIERDES TURNO</p>',
+                        background: '#080808', color: '#fff'
+                    }).then(() => processFailure(jugador));
+                }
             } else {
                 processFailure(jugador);
             }

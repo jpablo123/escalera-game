@@ -49,10 +49,13 @@ El jugador debe adivinar una palabra clave, revelando letra por letra con mecán
 ### 3. Retos de Regulación Emocional (Nuevos)
 Diseñados para intervenir en el estado fisiológico y cognitivo del jugador.
 *   **Regula antes de Responder (Casilla 14 - Cian):**
+    *   **Visual:** Icono Zen de Pausa (Brillo Cian).
     *   Simula un chat de "Ghosting". Obliga al jugador a esperar **15 segundos** con un temporizador de respiración antes de permitirle elegir una respuesta.
 *   **Identifica y Transforma (Casilla 25 - Cian):**
+    *   **Visual:** Mariposa Neón (Transformación Púrpura).
     *   Pide transformar una emoción difícil (ej. Celos) en una acción sana seleccionable (ej. Pedir espacio).
 *   **Baja la Intensidad (Casilla 40 - Cian):**
+    *   **Visual:** Termómetro Congelado (Azul Hielo).
     *   Muestra un "Termómetro" de enojo al máximo (Nivel 10).
     *   El jugador debe interactuar (clic en "Respirar") repetidamente para bajar la barra a zona segura (<4).
 
