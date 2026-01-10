@@ -1105,7 +1105,13 @@ function lanzarAdivinanza(jugador) {
         background: '#080808',
         color: '#F39C12',
         confirmButtonColor: '#2ECC71',
-        confirmButtonText: 'RESPONDER'
+        confirmButtonText: 'RESPONDER',
+        allowOutsideClick: false,
+        inputValidator: (value) => {
+            if (!value) {
+                return '¡Debes escribir algo!';
+            }
+        }
     }).then((result) => {
         if (result.value) {
             const resp = result.value.toLowerCase().trim();
@@ -1616,24 +1622,28 @@ const infoData = {
 
 function lanzarInfoModal(jugador, id) {
     const data = infoData[id] || { title: "INFO", msg: "Mensaje no encontrado", icon: "tile_reflection.png" };
+
+    // Fix: Ensure HTML tags are properly parsed by Swal
     Swal.fire({
         title: data.title,
         html: `
-            < div style = "margin-bottom: 15px;" >
-                <img src="./assets/sprites/${data.icon}" style="width: 80px; height: 80px; filter: drop-shadow(0 0 5px #fff); animation: float 3s infinite ease-in-out;">
+            <div style="margin-bottom: 20px;">
+                <img src="./assets/sprites/${data.icon}" style="width: 80px; height: 80px; animation: float 3s infinite ease-in-out;">
             </div>
-            <p style="font-size: 1.3em; margin-bottom: 20px; line-height: 1.4;">"${data.msg}"</p>
-            <p style="color: #F1C40F; font-size: 0.9em; font-style: italic;">💡 ${data.sub}</p>
+            <p style="font-size: 1.2em; color: #fff; margin-bottom: 15px;">${data.msg}</p>
+            ${data.sub ? `<p style="font-size: 0.9em; color: #aaa; font-style: italic;">(${data.sub})</p>` : ''}
         `,
         confirmButtonText: 'ENTENDIDO',
-        background: '#0a0a0a',
+        confirmButtonColor: '#3498DB',
+        background: '#080808',
         color: '#fff',
-        allowOutsideClick: false,
-        customClass: { confirmButton: 'game-opt-btn aesthetic-btn' } // Use new styles for button
+        allowOutsideClick: false
     }).then(() => {
+        // Just end turn, no movement reward
         cambiarTurno();
     });
 }
+
 
 
 function awardMedal(jugador) {
