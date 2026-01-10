@@ -340,7 +340,6 @@ function crearTablero() {
                 div.style.backgroundImage = `url('./assets/sprites/${icon}')`;
                 div.style.backgroundSize = "cover";
                 div.style.boxShadow = "inset 0 0 10px #9B59B6";
-            } else if (casillasEspeciales[i].tipo === 'retoRegulacion') {
             } else if (casillasEspeciales[i].tipo === 'retoMaestro') {
                 div.classList.add('casilla-maestro');
             } else if (casillasEspeciales[i].tipo === 'retoRegulacion') {
@@ -1255,36 +1254,60 @@ const retoMaestroData = [
     {
         bg: 'url("./assets/sprites/tile_maestro.png")',
         msg: "Ves que molestan a alguien en el chat del grupo. ¿Qué haces?",
-        optA: "Quedarme callado", // Legacy A/B support
-        optB: "Escribir que eso no está bien",
+        options: [
+            { id: "A", text: "Quedarme callado" },
+            { id: "B", text: "Escribir que eso no está bien" }
+        ],
         correct: "B"
     }
 ];
 
 function lanzarRetoMaestro2(jugador) {
     const reto = retoMaestroData[Math.floor(Math.random() * retoMaestroData.length)];
-    let timeLeft = 15; // More time for reading 4 options
+    let timeLeft = 20; // Increased time
     let timerInterval;
+    let userChoice = null; // Closure variable to track choice
 
-    // Build Form HTML based on data structure
-    let formHtml = '';
+    // Build Option Buttons HTML
+    let buttonsHtml = '<div style="display: flex; flex-direction: column; gap: 15px; margin-top: 20px; width: 100%;">';
 
     if (reto.options) {
-        // Multiple Choice (Radio)
-        formHtml = `<div style="text-align: left; margin-top: 10px;">`;
         reto.options.forEach(opt => {
-            formHtml += `
-                <div style="margin-bottom: 10px; padding: 10px; background: #222; border-radius: 5px; cursor: pointer;" onclick="document.getElementById('opt-${opt.id}').click()">
-                    <input type="radio" name="maestro-opt" id="opt-${opt.id}" value="${opt.id}" style="margin-right: 10px;">
-                    <label style="cursor: pointer; color: #ddd;">${opt.id}) ${opt.text}</label>
-                </div>
+            // Using a unique ID for each button to bind click events later if needed, 
+            // but inline onclick is easier here for Swal handling.
+            // We pass the ID ('A', 'B', etc) to clickConfirm logic or direct close.
+            // But Swal.close() with value is cleaner.
+            // We'll mimic Swal.clickConfirm() logic by resolving with value.
+            buttonsHtml += `
+                <button 
+                    class="aesthetic-btn" 
+                    style="
+                        background: #2ECC71; 
+                        border: 2px solid #27AE60; 
+                        padding: 15px; 
+                        font-family: 'Press Start 2P', cursive; 
+                        font-size: 0.9em; 
+                        text-align: left;
+                        line-height: 1.4;
+                        color: #000;
+                        transition: transform 0.1s;
+                    "
+                    onmouseover="this.style.background='#27AE60'"
+                    onmouseout="this.style.background='#2ECC71'"
+                    onclick="window.resolverRetoMaestro('${opt.id}')"
+                >
+                    <span style="font-weight: bold;">${opt.id})</span> ${opt.text}
+                </button>
             `;
         });
-        formHtml += `</div>`;
-    } else {
-        // Legacy A/B (Handled via Swal Confirm/Deny buttons, so empty form here)
-        formHtml = '';
     }
+    buttonsHtml += '</div>';
+
+    // Global Resolver Helper
+    window.resolverRetoMaestro = (val) => {
+        userChoice = val;
+        Swal.clickConfirm();
+    };
 
     Swal.fire({
         title: '¡RETO MAESTRO!',
@@ -1292,36 +1315,25 @@ function lanzarRetoMaestro2(jugador) {
             <div style="margin-bottom: 20px;">
                 <img src="./assets/sprites/tile_maestro.png" style="width: 80px; height: 80px; animation: pulse 1s infinite;">
             </div>
-            <p style="font-size: 1.1em; color: #F1C40F;">${reto.msg}</p>
-            ${formHtml}
-            <div id="maestro-timer" style="font-size: 2em; color: #E74C3C; font-weight: bold; margin: 15px;">${timeLeft}s</div>
+            <p style="font-size: 1.1em; color: #F1C40F; line-height: 1.6;">${reto.msg}</p>
+            ${buttonsHtml}
+            <div id="maestro-timer" style="font-size: 1.5em; color: #E74C3C; font-weight: bold; margin-top: 20px;">${timeLeft}s</div>
         `,
-        showConfirmButton: !reto.options, // Show only if Legacy A/B
-        showDenyButton: !reto.options,    // Show only if Legacy A/B
-        confirmButtonText: reto.options ? 'ENVIAR RESPUESTA' : reto.optA,
-        denyButtonText: reto.options ? null : reto.optB,
-        confirmButtonColor: '#2ECC71', // User Request: Both Green
-        denyButtonColor: '#2ECC71',
+        showConfirmButton: false, // Hidden, we use custom buttons
+        showDenyButton: false,
         showCancelButton: false,
         background: '#080808',
         color: '#fff',
         allowOutsideClick: false,
+        width: 700,
         didOpen: () => {
-            // If options exist, show a custom confirm button for the form
-            if (reto.options) {
-                Swal.showLoading = false; // Ensure buttons are clickable
-                const confirmBtn = Swal.getConfirmButton();
-                confirmBtn.style.display = 'inline-block';
-                confirmBtn.innerText = 'CONFIRMAR DECISIÓN';
-            }
-
             const timerDisplay = document.getElementById('maestro-timer');
             timerInterval = setInterval(() => {
                 timeLeft--;
                 if (timerDisplay) timerDisplay.innerText = timeLeft + "s";
                 if (timeLeft <= 0) {
                     clearInterval(timerInterval);
-                    Swal.clickCancel(); // Auto-fail
+                    window.resolverRetoMaestro('TIMEOUT');
                 }
             }, 1000);
         },
@@ -1329,35 +1341,35 @@ function lanzarRetoMaestro2(jugador) {
             clearInterval(timerInterval);
         },
         preConfirm: () => {
-            if (reto.options) {
-                const selected = document.querySelector('input[name="maestro-opt"]:checked');
-                if (!selected) {
-                    Swal.showValidationMessage('Debes seleccionar una opción');
-                    return false;
-                }
-                return selected.value;
-            }
-            return "A"; // Default for legacy btn
+            // Retrieve variable from closure
+            return userChoice || 'TIMEOUT';
         }
     }).then((result) => {
-        let choice = '';
+        let choice = result.value || 'TIMEOUT';
 
-        if (result.isDismissed && result.dismiss === Swal.DismissReason.cancel) {
-            Swal.fire('¡TIEMPO AGOTADO!', 'Debes pensar rápido.', 'error').then(() => processFailure(jugador));
+        if (choice === 'TIMEOUT') {
+            Swal.fire({
+                title: '¡TIEMPO AGOTADO!',
+                text: 'La indecisión también es una respuesta... pero aquí te cuesta el turno.',
+                icon: 'error',
+                background: '#080808',
+                color: '#fff',
+                confirmButtonColor: '#E74C3C'
+            }).then(() => processFailure(jugador));
             return;
-        }
-
-        if (reto.options) {
-            if (result.isConfirmed) choice = result.value;
-        } else {
-            // Legacy
-            choice = result.isConfirmed ? "A" : (result.isDenied ? "B" : "");
         }
 
         if (choice === reto.correct) {
             processSuccess(jugador, { premioMsg: "¡DOMINIO TOTAL!", premioDesc: "Has tomado la decisión correcta bajo presión. Avanzas 5 casillas." });
         } else {
-            Swal.fire('ERROR DE JUICIO', 'Esa no era la mejor opción.', 'error').then(() => processFailure(jugador));
+            Swal.fire({
+                title: 'ERROR DE JUICIO',
+                text: 'Esa no era la mejor opción en este contexto.',
+                icon: 'error',
+                background: '#080808',
+                color: '#fff',
+                confirmButtonColor: '#E74C3C'
+            }).then(() => processFailure(jugador));
         }
     });
 }
@@ -1413,237 +1425,122 @@ function lanzarRetoRegulacion(jugador, subTipo) {
         });
     }
     else if (subTipo === 'transforma') {
-        const launchMinigame = () => {
-            let energy = 0;
-            let stability = 100;
-            let interval;
-            let isHolding = false;
-            let isOverheated = false;
+        // NEW MECHANIC: POWER BAR BALANCE (Channeling Energy)
+        let position = 0;
+        let direction = 1;
+        let speed = 3; // Slightly faster for challenge
+        let intervalId;
+        let isStopped = false;
 
-            Swal.fire({
-                title: '¡ACCIÓN CORRECTA!',
-                html: `
-                    <style>
-                        .energy-container { width: 80%; height: 20px; background: #222; border-radius: 10px; margin: 10px auto; overflow: hidden; border: 2px solid #555; position: relative; }
-                        .energy-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #E74C3C, #9B59B6); transition: width 0.1s; }
-                        .stability-container { width: 80%; height: 10px; background: #222; border-radius: 5px; margin: 5px auto; overflow: hidden; }
-                        .stability-bar { width: 100%; height: 100%; background: #3498DB; transition: width 0.1s, background 0.2s; }
-                        .transform-icon { width: 100px; height: 100px; margin: 0 auto; transition: all 0.1s; filter: grayscale(100%) brightness(0.5); }
-                        .hold-btn { 
-                            background: #fff; color: #000; border: none; padding: 15px 30px; 
-                            font-size: 1.2em; font-weight: bold; border-radius: 50px; cursor: pointer;
-                            box-shadow: 0 0 10px #fff; user-select: none; transition: all 0.2s;
-                        }
-                        .hold-btn:active { transform: scale(0.95); }
-                        .hold-btn:disabled { background: #555; color: #888; cursor: not-allowed; box-shadow: none; }
-                        .status-text { min-height: 20px; color: #aaa; font-size: 0.9em; margin-bottom: 10px; }
-                        @keyframes shake {
-                            0% { transform: translate(1px, 1px) rotate(0deg); }
-                            10% { transform: translate(-1px, -2px) rotate(-1deg); }
-                            20% { transform: translate(-3px, 0px) rotate(1deg); }
-                            30% { transform: translate(3px, 2px) rotate(0deg); }
-                        }
-                        @keyframes overheat {
-                            0% { background-color: #3498DB; }
-                            50% { background-color: #E74C3C; }
-                            100% { background-color: #3498DB; }
-                        }
-                    </style>
-                    <div style="margin-bottom: 20px;">
-                        <img src="./assets/sprites/emotion_lock.png" id="t-icon" class="transform-icon">
-                    </div>
-                    <p>Ahora canaliza esa decisión.<br>Mantén presionado para transformar la emoción.<br><span style="color: #E74C3C; font-size: 0.8em;">¡Cuidado con sobrecalentar!</span></p>
+        Swal.fire({
+            title: 'CANALIZA TU ENERGÍA',
+
+            html: `
+                <div style="margin-bottom: 20px;">
+                    <img src="./assets/sprites/butterfly.png" style="width: 100px; height: 100px; animation: pulseIce 2s infinite; filter: drop-shadow(0 0 10px #9B59B6);">
+                </div>
+                <div style="font-family: 'Press Start 2P', cursive; letter-spacing: 1px;">
+                    <p style="margin-bottom: 20px; font-size: 0.9em; color: #ddd; line-height: 1.5;">
+                        Tu emoción es intensa...<br>
+                        ¡Detén la barra en el <strong style="color: #2ECC71;">CENTRO</strong>!
+                    </p>
+                
+                <div style="
+                    width: 100%; height: 50px; background: #222; border-radius: 25px; 
+                    position: relative; overflow: hidden; border: 3px solid #555;
+                    box-shadow: inset 0 0 20px #000; margin: 0 auto;">
                     
-                    <div class="energy-container">
-                        <div id="energy-bar" class="energy-bar"></div>
-                    </div>
+                    <!-- ZONES -->
+                    <div style="position: absolute; left: 0; width: 30%; height: 100%; background: repeating-linear-gradient(45deg, #C0392B, #C0392B 10px, #E74C3C 10px, #E74C3C 20px); opacity: 0.3;"></div>
+                    <div style="position: absolute; right: 0; width: 30%; height: 100%; background: repeating-linear-gradient(-45deg, #C0392B, #C0392B 10px, #E74C3C 10px, #E74C3C 20px); opacity: 0.3;"></div>
+                    <div style="position: absolute; left: 30%; width: 40%; height: 100%; background: rgba(46, 204, 113, 0.2); border-left: 2px solid #2ECC71; border-right: 2px solid #2ECC71; box-shadow: 0 0 15px #2ECC71 inset;"></div>
                     
-                    <div class="stability-container">
-                        <div id="stability-bar" class="stability-bar"></div>
+                    <!-- CURSOR -->
+                    <div id="energy-cursor" style="
+                        position: absolute; left: 0%; top: 0; width: 12px; height: 100%; 
+                        background: #fff; box-shadow: 0 0 15px #fff, 0 0 30px #9B59B6; z-index: 10; border-radius: 2px;">
                     </div>
-                    <div id="status-msg" class="status-text">Estabilidad: 100%</div>
+                </div>
 
-                    <button id="btn-transform" class="hold-btn">⚡ TRANSFORMAR ⚡</button>
-                `,
-                showConfirmButton: false,
-                allowOutsideClick: false,
-                background: '#080808',
-                color: '#fff',
-                didOpen: () => {
-                    const btn = document.getElementById('btn-transform');
-                    const eBar = document.getElementById('energy-bar');
-                    const sBar = document.getElementById('stability-bar');
-                    const status = document.getElementById('status-msg');
-                    const icon = document.getElementById('t-icon');
+                <div id="energy-msg" style="height: 30px; margin-top: 15px; font-weight: bold; color: #9B59B6; text-shadow: 0 0 5px #9B59B6;">...</div>
+                
+                <button id="btn-channel" class="aesthetic-btn" style="
+                    margin-top: 20px; 
+                    padding: 20px 40px; 
+                    font-size: 1.5em; 
+                    width: 100%; 
+                    background: linear-gradient(45deg, #8E44AD, #9B59B6);
+                    border: 2px solid #fff;
+                    box-shadow: 0 0 20px rgba(155, 89, 182, 0.5);
+                    text-transform: uppercase;
+                    letter-spacing: 2px;
+                    font-family: 'Press Start 2P', cursive; 
+                ">⚡ CANALIZAR ⚡</button>
+            </div>
+            `,
+            showConfirmButton: false,
+            background: '#080808',
+            color: '#fff',
+            allowOutsideClick: false,
+            didOpen: () => {
+                const cursor = document.getElementById('energy-cursor');
+                const btn = document.getElementById('btn-channel');
+                const msg = document.getElementById('energy-msg');
 
-                    const loop = setInterval(() => {
-                        if (isOverheated) {
-                            // Cooldown phase (Automatic)
-                            stability += 1.5; // Slower recovery punishment
-                            btn.innerText = `⚠️ ENFRIANDO (${Math.floor(stability)}%)...`;
-                            btn.style.background = "#333";
+                // Animation Loop
+                intervalId = setInterval(() => {
+                    if (isStopped) return;
 
-                            if (stability >= 100) {
-                                stability = 100;
-                                isOverheated = false;
-                                btn.disabled = false;
-                                btn.innerText = "⚡ TRANSFORMAR ⚡";
-                                btn.style.background = "#fff";
-                                status.innerText = "Sistema Listo";
-                                status.style.color = "#2ECC71";
-                            }
-                        } else if (isHolding) {
-                            // Charging
-                            energy += 0.4;  // Slow charge (requires patience)
-                            stability -= 1.2; // Risk of overheat
+                    position += direction * speed;
+                    if (position >= 96 || position <= 0) direction *= -1; // Bounce
 
-                            if (stability <= 0) {
-                                stability = 0;
-                                triggerOverheat();
-                            }
-                        } else {
-                            // Idling (Cooling down + Decay)
-                            energy -= 0.1; // Slow decay (don't punish releasing too much)
-                            stability += 2.0; // Fast manual recovery (encourage releasing)
-                        }
+                    cursor.style.left = position + '%';
+                }, 16); // ~60fps
 
-                        // Bounds
-                        if (energy < 0) energy = 0;
-                        if (energy >= 100) { energy = 100; completeTransformation(); }
-                        if (stability > 100) stability = 100;
+                // Click Handler
+                if (btn) btn.onclick = () => {
+                    if (isStopped) return;
+                    isStopped = true;
+                    clearInterval(intervalId);
 
-                        updateUI();
-                    }, 20); // Faster tick rate (20ms) for smoother anim
-
-                    const triggerOverheat = () => {
-                        isOverheated = true;
-                        isHolding = false;
-                        btn.disabled = true;
-                        energy = Math.max(0, energy - 15); // Penalty
-                        status.innerText = "¡SISTEMA BLOQUEADO!";
-                        status.style.color = "#E74C3C";
-                        icon.style.animation = 'none';
-                        swal.getPopup().classList.add('swal2-shake');
-                        setTimeout(() => swal.getPopup().classList.remove('swal2-shake'), 500);
-                    };
-
-                    const updateUI = () => {
-                        eBar.style.width = energy + '%';
-                        sBar.style.width = stability + '%';
-
-                        if (!isOverheated) {
-                            sBar.style.backgroundColor = stability < 30 ? '#E74C3C' : '#3498DB';
-                            status.style.color = '#aaa';
-                            if (isHolding) status.innerText = "Transformando...";
-                            else status.innerText = "Esperando...";
-                        }
-
-                        const progress = energy / 100;
-                        icon.style.filter = `grayscale(${1 - progress}) brightness(${0.5 + progress}) drop-shadow(0 0 ${energy / 2}px #9B59B6)`;
-                    };
-
-                    const completeTransformation = () => {
-                        clearInterval(loop);
-                        btn.disabled = true;
-                        btn.innerText = "¡ÉXITO!";
-                        icon.style.filter = "grayscale(0) brightness(1.5) drop-shadow(0 0 30px #9B59B6)";
-                        icon.src = "./assets/sprites/butterfly.png";
-                        icon.style.animation = "pulseIce 1s infinite";
+                    // Check Zone (Green is 30% to 70%)
+                    if (position >= 30 && position <= 70) {
+                        // SUCCESS
+                        cursor.style.background = '#2ECC71';
+                        cursor.style.boxShadow = '0 0 20px #2ECC71';
+                        msg.innerText = "¡ENERGÍA ESTABILIZADA!";
+                        msg.style.color = "#2ECC71";
+                        btn.innerText = "¡LO LOGRASTE!";
+                        btn.style.borderColor = "#2ECC71";
+                        btn.style.color = "#2ECC71";
 
                         setTimeout(() => {
                             Swal.close();
-                            processSuccess(jugador, { premioMsg: "¡MAESTRÍA EMOCIONAL!", premioDesc: "Has regulado tu energía perfectamente. Avanzas 3 casillas." });
+                            processSuccess(jugador, {
+                                premioMsg: "¡TRANSFORMACIÓN COMPLETA!",
+                                premioDesc: "Has convertido el enojo en determinación. Avanzas 3 casillas."
+                            });
                         }, 1500);
-                    };
 
-                    btn.addEventListener('mousedown', () => { if (!isOverheated) { isHolding = true; icon.style.animation = 'shake 0.5s infinite'; } });
-                    btn.addEventListener('touchstart', (e) => { e.preventDefault(); if (!isOverheated) { isHolding = true; icon.style.animation = 'shake 0.5s infinite'; } });
+                    } else {
+                        // FAIL
+                        cursor.style.background = '#E74C3C';
+                        msg.innerText = "¡DESBORDAMIENTO!";
+                        msg.style.color = "#E74C3C";
+                        btn.innerText = "INTENTA DE NUEVO...";
+                        btn.style.borderColor = "#E74C3C";
+                        btn.style.color = "#E74C3C";
+                        btn.disabled = true;
 
-                    window.addEventListener('mouseup', () => { isHolding = false; icon.style.animation = 'none'; });
-                    window.addEventListener('touchend', () => { isHolding = false; icon.style.animation = 'none'; });
-                }
-            });
-        };
-
-        // QUIZ PHASE (GAMIFIED UI)
-        Swal.fire({
-            title: 'TRANSFORMA LA EMOCIÓN',
-            html: `
-                <style>
-                    .opt-container { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
-                    .game-opt-btn {
-                        background: rgba(20, 20, 30, 0.9);
-                        border: 2px solid #555;
-                        color: #fff;
-                        padding: 15px;
-                        border-radius: 12px;
-                        cursor: pointer;
-                        text-align: left;
-                        font-family: 'Segoe UI', sans-serif;
-                        font-size: 1em;
-                        transition: all 0.2s;
-                        position: relative;
-                        overflow: hidden;
-                        display: flex;
-                        align-items: center;
+                        setTimeout(() => {
+                            Swal.close();
+                            processFailure(jugador);
+                        }, 1500);
                     }
-                    .game-opt-btn:hover {
-                        transform: translateX(5px);
-                        border-color: #9B59B6; /* Purple for Transform theme */
-                        background: #2a2a40;
-                        box-shadow: -4px 0 15px rgba(155, 89, 182, 0.4);
-                    }
-                    .game-opt-btn .icon { font-size: 1.5em; margin-right: 15px; min-width: 30px; text-align: center; }
-                    .game-opt-btn:active { transform: scale(0.98); border-color: #fff; }
-                </style>
-
-                <div style="margin-bottom: 20px; text-align: center;">
-                    <img src="./assets/sprites/emotion_lock.png" style="width: 80px; height: 80px; animation: float 3s infinite;">
-                    <p style="font-size: 1.1em; color: #ccc; margin-top: 10px;">
-                        Completa la frase: <br>
-                        <span style="color: #9B59B6; font-weight: bold; font-size: 1.2em;">"Cuando siento CELOS, una forma sana de actuar es..."</span>
-                    </p>
-                </div>
-
-                <div class="opt-container">
-                    <button class="game-opt-btn" onclick="Swal.clickConfirm(); window.selectedOpt='control'">
-                        <span class="icon">🕵️</span>
-                        <span>Revisar su celular a escondidas</span>
-                    </button>
-                    <button class="game-opt-btn" onclick="Swal.clickConfirm(); window.selectedOpt='space'">
-                        <span class="icon">🧘</span>
-                        <span>Pedir un momento para calmarme</span>
-                    </button>
-                    <button class="game-opt-btn" onclick="Swal.clickConfirm(); window.selectedOpt='sarcasm'">
-                        <span class="icon">😒</span>
-                        <span>Hacer comentarios sarcásticos</span>
-                    </button>
-                </div>
-            `,
-            showConfirmButton: false, // Hidden, we use custom buttons
-            showCancelButton: true,
-            cancelButtonText: 'Cancelar',
-            background: '#080808',
-            color: '#fff',
-            didOpen: () => {
-                window.selectedOpt = null; // Reset selection
-            }
-        }).then((result) => {
-            if (result.isConfirmed || window.selectedOpt) {
-                const choice = window.selectedOpt;
-
-                if (choice === 'space') {
-                    launchMinigame();
-                } else if (choice) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'CONDUCTA NO SANA',
-                        html: '<p>Esa acción busca controlar o herir.</p><p style="color: #E74C3C; font-weight: bold;">GAME OVER - PIERDES TURNO</p>',
-                        background: '#080808', color: '#fff'
-                    }).then(() => processFailure(jugador));
-                }
-            } else {
-                processFailure(jugador);
+                };
+            },
+            willClose: () => {
+                clearInterval(intervalId);
             }
         });
     }
@@ -1653,7 +1550,7 @@ function lanzarRetoRegulacion(jugador, subTipo) {
         Swal.fire({
             title: '¡BAJA LA INTENSIDAD!',
             html: `
-                <p>Estás en nivel <span id="temp-val" style="color: red; font-weight: bold;">10</span> de enojo.</p>
+            < p > Estás en nivel < span id = "temp-val" style = "color: red; font-weight: bold;" > 10</span > de enojo.</p >
                 <p>Bájalo a menos de 4 para continuar.</p>
                 <div style="width: 80%; height: 300px; background: #333; margin: 20px auto; position: relative; border-radius: 10px; overflow: hidden; border: 2px solid #555;">
                     <div id="thermometer-bar" style="width: 100%; height: 100%; background: linear-gradient(to top, #2ECC71, #F1C40F, #E74C3C); position: absolute; bottom: 0; transition: height 0.5s;"></div>
@@ -1722,7 +1619,7 @@ function lanzarInfoModal(jugador, id) {
     Swal.fire({
         title: data.title,
         html: `
-            <div style="margin-bottom: 15px;">
+            < div style = "margin-bottom: 15px;" >
                 <img src="./assets/sprites/${data.icon}" style="width: 80px; height: 80px; filter: drop-shadow(0 0 5px #fff); animation: float 3s infinite ease-in-out;">
             </div>
             <p style="font-size: 1.3em; margin-bottom: 20px; line-height: 1.4;">"${data.msg}"</p>
