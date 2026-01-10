@@ -551,22 +551,22 @@ h1.game-title-ingame {
 }
 
 .ficha.p1 {
-    background-image: url('../assets/avatars/avatar1.png');
+    background-image: url('../assets/avatars/char_tomas.png');
     border-bottom: 2px solid var(--p1-color);
 }
 
 .ficha.p2 {
-    background-image: url('../assets/avatars/avatar2.png');
+    background-image: url('../assets/avatars/char_mateo.png');
     border-bottom: 2px solid var(--p2-color);
 }
 
 .ficha.p3 {
-    background-image: url('../assets/avatars/avatar3.png');
+    background-image: url('../assets/avatars/char_sebastian.png');
     border-bottom: 2px solid var(--p3-color);
 }
 
 .ficha.p4 {
-    background-image: url('../assets/avatars/avatar4.png');
+    background-image: url('../assets/avatars/char_lucas.png');
     border-bottom: 2px solid var(--p4-color);
 }
 
@@ -1648,27 +1648,37 @@ screen and (max-height: 800px) {
 }
 
 .carousel-role {
-    font-size: 0.8em;
+    font-size: 1.2em;
+    /* Increased from 0.8em per user request */
     color: #f1c40f;
     text-transform: uppercase;
     letter-spacing: 2px;
     margin-bottom: 5px;
+    font-weight: bold;
+    text-shadow: 0 0 5px rgba(241, 196, 15, 0.5);
+    /* Added glow for "golden" effect */
 }
+
+
 
 .carousel-name {
     font-family: 'Press Start 2P', cursive;
     color: #fff;
     margin-bottom: 15px;
-    font-size: 1.2em;
+    font-size: 1.6em;
+    /* Bigger */
     text-align: center;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
 }
 
 .carousel-bio {
-    font-size: 0.9em;
-    color: #ddd;
+    font-size: 1.1em;
+    /* Bigger Bio */
+    color: #f0f0f0;
     text-align: center;
-    line-height: 1.5;
-    font-style: italic;
+    line-height: 1.6;
+    font-style: normal;
+    padding: 0 15px;
 }
 
 /* Responsive Hide */
@@ -1703,9 +1713,11 @@ screen and (max-height: 800px) {
 }
 
 #btn-lanzar {
-    font-size: 1.2rem !important;
-    padding: 15px 30px !important;
+    font-size: 3rem !important;
+    /* Huge Emoji Button */
+    padding: 10px 20px !important;
     font-weight: bold;
+    line-height: 1;
 }
 
 .player-card .player-name {

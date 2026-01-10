@@ -470,27 +470,8 @@ function actualizarTurnoUI() {
         avatarContainer.style.height = '120px'; // Taller for full body
     }
 
-    // Update Bio (Dynamic Injection)
-    let bioPanel = document.getElementById('char-bio-panel');
-    if (!bioPanel) {
-        // Create if missing in sidebar-left
-        const parent = document.querySelector('.sidebar-left .panel-box');
-        if (parent) {
-            bioPanel = document.createElement('div');
-            bioPanel.id = 'char-bio-panel';
-            bioPanel.className = 'char-bio-box';
-            // Insert after meds or name?
-            parent.appendChild(bioPanel);
-        }
-    }
-
-    if (bioPanel) {
-        bioPanel.innerHTML = `
-            <div style="font-size:0.8em; color:#888; text-transform:uppercase; margin-bottom:5px;">${actual.bioData.role}</div>
-            <p style="font-size:0.85em; line-height:1.4; color:#ddd; margin-bottom: 8px;">${actual.bioData.bio}</p>
-            <div style="color:var(--${actual.color}-color); font-weight:bold; font-size:0.8em; font-style:italic;">"${actual.bioData.msg}"</div>
-        `;
-    }
+    // Bio Removed per User Request (Step 1717)
+    // Only Credits remain in HTML.
 
     actualizarListaJugadores();
 }
@@ -1044,9 +1025,10 @@ function cambiarTurno() {
     actualizarTurnoUI();
 
     // Enable button for next player
+    // Enable button for next player
     if (btnLanzar) {
         btnLanzar.disabled = false;
-        btnLanzar.innerText = `LANZAR (${jugadores[turnoActual].nombre})`;
+        btnLanzar.innerText = "🎲"; // Icon only per user request
     }
 
     logSystem(`Turno de ${jugadores[turnoActual].nombre}`);
@@ -1088,6 +1070,8 @@ function lanzarReto(jugador) {
         showCancelButton: true,
         confirmButtonText: '¡RETO COMPLETADO!',
         cancelButtonText: 'No pude hacerlo...',
+        confirmButtonColor: '#2ECC71', // User Request: Both Green
+        cancelButtonColor: '#2ECC71',
         background: '#080808',
         color: '#fff'
     }).then((result) => {
@@ -1121,6 +1105,7 @@ function lanzarAdivinanza(jugador) {
         inputPlaceholder: 'Tu respuesta...',
         background: '#080808',
         color: '#F39C12',
+        confirmButtonColor: '#2ECC71',
         confirmButtonText: 'RESPONDER'
     }).then((result) => {
         if (result.value) {
@@ -1799,7 +1784,7 @@ function startMenuCarousel() {
                 <div class="carousel-role">${char.role}</div>
                 <div class="carousel-img" style="background-image: url('${char.img}');"></div>
                 <div class="carousel-name">${char.name}</div>
-                <div class="carousel-bio">${char.msg}</div>
+                <div class="carousel-bio">${char.bio}</div>
             `;
             container.style.opacity = 1;
         }, 500);
