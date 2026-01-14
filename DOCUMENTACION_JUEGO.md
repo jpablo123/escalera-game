@@ -8,7 +8,7 @@ El juego es una herramienta educativa digital diseñada para prevenir la violenc
 ## 🕹️ Mecánicas Principales
 
 ### 🎲 Turnos y Movimiento
-- **Jugadores:** 2 a 4 jugadores (o Modo Debug con 4 jugadores automáticos).
+- **Jugadores:** 1 a 4 jugadores (o Modo Debug con 4 jugadores automáticos).
 - **Dados:** Se lanza un dado virtual para avanzar.
 - **Regla de Oro:** Al caer en una casilla, se debe completar la acción o desafío.
 - **Victoria:** Avanzas 2 casillas (algunos retos otorgan 3 o 4 casillas).
