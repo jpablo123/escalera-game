@@ -188,4 +188,4 @@ Para ganar el juego, el jugador debe llegar a la casilla 49.
 **Creado por:** Juan Pablo Sanabria Moscoso  
 **Propiedad Intelectual:** Karen Natalia Ordoñez Robles  
 **Versión:** MCV v1.0  
-**© 2024 Misión Cero Violencia - Todos los derechos reservados**
+**© 2026 Misión Cero Violencia - Todos los derechos reservados**
